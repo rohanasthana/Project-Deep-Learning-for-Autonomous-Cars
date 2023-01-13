@@ -26,7 +26,14 @@ The pix2pix model was trained by feeding it pairs of good and bad weather images
 ![Different environments](https://github.com/rohanasthana/Project-Deep-Learning-for-Autonomous-Cars/blob/master/Pictures/fig3.jpg)
 
 ## The "Good weather" agent
+
 The agent was a model derived from a CNN network consisting of 3 convolution blocks, each comprised of 1 x Conv layer, 1 x Max Pooling layer, 1 x BatchNorm layer.
+
+## Results
+
+The "good weather" agent combined with the Pix2pix model operating in modified environments showed performance not significantly different from its perfoamance in the default environment.
+
+![Results](https://github.com/rohanasthana/Project-Deep-Learning-for-Autonomous-Cars/blob/master/Pictures/fig5.jpg)
 
 
 
