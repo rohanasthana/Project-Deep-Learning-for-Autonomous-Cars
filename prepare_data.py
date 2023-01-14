@@ -1,7 +1,11 @@
 import numpy as np
-from game import CarRacing
+from game_weather import CarRacing
 import cv2
 from pyglet.window import key
+from configuration import config
+import os
+
+time,weather=config()
 
 
 a = np.array([0.0, 0.0, 0.0])
@@ -36,7 +40,7 @@ def start_racing():
     f=0
     X_images=[]
     Y_keys = []
-
+    os.makedirs('data/'+str(time)+str(weather))
     env = CarRacing()
     env.render()
     env.viewer.window.on_key_press = key_press
@@ -56,6 +60,7 @@ def start_racing():
         total_reward = 0.0
         steps = 0
         restart = False
+        
         while True:
             s, r, done, info = env.step(a)
             total_reward += r
@@ -70,22 +75,23 @@ def start_racing():
             X_images.append(img)
             #keys capture
             frame_keys = keys_from_action(a)
-            print(frame_keys)
             Y_keys.append(frame_keys)
+
             if len(X_images) % 1000 == 0:
                 print("Total length: " + str(len(X_images)))
             if done or restart or isopen == False:
                 break
             if len(X_images) == 1000: #was 1000
                 #save images
-                filename='image_save'+str(f)+'.npy'
+
+                filename='data/'+str(time)+str(weather)+'/image_save'+str(f)+'.npy'
                 np.save(filename,X_images)
 
                 print('SAVED'+ str(filename))
                 X_images=[]
 
                 #save keys
-                filename = 'keys_save' + str(f) + '.npy'
+                filename = 'data/'+str(time)+str(weather)+'/keys_save' + str(f) + '.npy'
                 np.save(filename, Y_keys)
 
                 print('SAVED' + str(filename))

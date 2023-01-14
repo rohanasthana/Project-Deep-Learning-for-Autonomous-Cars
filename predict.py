@@ -1,13 +1,30 @@
 import numpy as np
-import keras
+from keras.models import load_model
 from game_weather import CarRacing
 import cv2
 from pyglet.window import key
-from pynput.keyboard import Key, Controller
-from pywinauto.keyboard import SendKeys
+import matplotlib.pyplot as plt
+from PIL import Image
+import scipy.misc
+import png
+import matplotlib
 from skimage.transform import rescale, resize, downscale_local_mean
+from skimage.color import rgb2gray
+import os
+from configuration import config
 
-model=keras.models.load_model('simple_cnnv_200 epochs.h5')
+# from pynput.keyboard import Key, Controller
+# from pywinauto.keyboard import SendKeys
+time,weather=config()
+name='timedistributed_cnn_lstm'
+
+model_keys = load_model('models/simple_cnnv_200 epochs.h5')
+
+if not os.path.exists('models/'+str(time)+str(weather)):
+    os.makedirs('models/'+str(time)+str(weather))
+#model_weather = load_model('models/'+str(time)+str(weather)+'/'+str(name)+'.h5')
+model_weather = load_model('models/model_snow.h5')
+print(model_weather)
 
 a = np.array([0.0, 0.0, 0.0])
 
@@ -63,86 +80,78 @@ def start_racing():
         total_reward = 0.0
         steps = 0
         restart = False
+        f=0
         while True:
+            f+=1
             steps += 1
             isopen = env.render()
             #image capture
             img=env.render(mode='rgb_array')
-            #img = resize(img, (96,96,3),
-             #          anti_aliasing=True)
-            #print(img.shape)
-            img=prepare_image(img)
+            
             img=np.array(img)
+            if(f%10 ==0):
+
+                matplotlib.image.imsave('original_%s_%s_%s.png'%(weather,time,f), img )
             #print(np.shape(img))
-            img = np.reshape(img,(1,96,96))
-            y_predict=model.predict(img)
+            #plt.imshow(img)
+            #img_1 = np.reshape(img,(1,96,96,3))
+            img = (img - 127.5) / 127.5
+            img = resize(img, (96,96,3),
+                       anti_aliasing=True)
+
+            #img=rgb2gray(img) #GRAYSCALE conversion
+            img=np.expand_dims(img,axis=0)
+
+            img_gw = model_weather.predict(img)
+            #print(img_gw)
+
+
+
+            #print(img_gw)
+            img_gw=np.array(img_gw)
+            img_gw = (img_gw + 1) / 2.0
+            print(img_gw.shape)
+            img_gw = np.reshape(img_gw,(96,96,3))
+            #print(img_gw)
+            #if(f%10==0):
+              #  scipy.misc.toimage(image_array, cmin=0.0, cmax=...).save('outfile.jpg')
+                #im.save("image"+str(f)+".jpg")
+                #plt.imshow(img_gw)
+            #if(f%10 ==0):
+
+            #   matplotlib.image.imsave('%s_%s_%s.png'%(weather,time,f), img_gw)
+            img_gw=img_gw*255
+            img_gw=prepare_image(img_gw)
+
+
+
+            img_gw = np.reshape(img_gw,(1,96,96))
+            y_predict=model_keys.predict(img_gw)
             for ind,i in enumerate(y_predict[0]):
-                if(i>0.3):
-                    y_predict[0][ind]=1
-                else:
-                    y_predict[0][ind]=0
+                 if(i>0.3):
+                     y_predict[0][ind]=1
+                 else:
+                     y_predict[0][ind]=0
             a=keys_to_action(y_predict)
             #print(y_predict)
             speed= CarRacing.render_indicators(env,96,96)
             if(speed<10):
                 a=np.array(a)
                 a = np.concatenate(([a[0]],[1,0]),axis=0)
-                #s, r, done, info = env.step(a)
-            
-            s, r, done, info = env.step(a)
+                s, r, done, info = env.step(a)
+            else:
+                s, r, done, info = env.step(a)
 
             total_reward += r
-            print("TOTAL REWARD"+str(total_reward))
             rew.append(total_reward)
-            #if steps % 200 == 0 or done:
-                #print("\naction " + str(["{:+0.2f}".format(x) for x in a]))
-                #print("step {} total_reward {:+0.2f}".format(steps, total_reward))
+            print("TOTAL REWARD IS"+str(total_reward))
 
-
-            # for ind, i in enumerate(y_predict[0]):
-            #     if(i==1):
-            #         if(ind==0):
-            #             SendKeys('{LEFT}')
-            #         #pyautogui.press('left')
-            #         if(ind==1):
-            #             SendKeys('{RIGHT}')
-            #         if(ind==2):
-            #             SendKeys('{UP}')
-            #         if(ind==3):
-            #             SendKeys('{DOWN}')
-
-
-
-            #print(y_predict)
-            #X_images.append(img)
-            #keys capture
-            #frame_keys = keys_from_action(a)
-            #Y_keys.append(frame_keys)
-            #if len(X_images) % 1000 == 0:
-             #   print("Total length: " + str(len(X_images)))
             if done or restart or isopen == False:
                 break
-            #if len(X_images) == 1000: #was 1000
-                #save images
-             #   filename='image_save'+str(f+48)+'.npy'
-              #  np.save(filename,X_images)
-
-               # print('SAVED'+ str(filename))
-                #X_images=[]
-
-                #save keys
-                #filename = 'keys_save' + str(f+48) + '.npy'
-                #np.save(filename, Y_keys)
-
-                #print('SAVED' + str(filename))
-                #Y_keys = []
-                #f += 1
 
     env.close()
     print(max(rew))
 
-    #X_images=np.array(X_images)
-    #print(X_images.shape)
 
 
 def prepare_image(env):
